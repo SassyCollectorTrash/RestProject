@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using RestApi.Extension;
 using RestApi.Models;
 using RestApi.Services;
 
@@ -24,22 +26,27 @@ namespace RestApi.Controllers
         }
 
         [HttpPost]
-        public FileResult Post(ImagesUrlsInput images)
+        public FileContentResult[] Post(ImagesUrlsInput images)
         {
+            var result = new List<FileContentResult>();
+
             foreach (var imageUrl in images.Urls)
             {
                 if (string.IsNullOrEmpty(imageUrl)) continue;
 
-                var imageStream = _loadService.TryLoadImage(imageUrl).Result;
+                var imageStream = GetImage(imageUrl);
 
-                var imageSt = _imageService.CreatePreview_100x100(imageStream);
+                if(imageStream == null) continue;
 
-
-
-                return new FileContentResult(imageSt, "image/png");
+                result.Add(new FileContentResult(_imageService.CreatePreview_100x100(imageStream), "image/png"));
             }
 
-            return null;
+            return result.ToArray();;
+        }
+
+        private Stream GetImage(string imageSource)
+        {
+            return imageSource.IsUrl() ? _loadService.TryLoadImage(imageSource).Result : new MemoryStream(Convert.FromBase64String(imageSource));
         }
     }
 }

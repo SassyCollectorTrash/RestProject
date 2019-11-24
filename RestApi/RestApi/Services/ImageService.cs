@@ -7,23 +7,28 @@ namespace RestApi.Services
 {
     public class ImageService : IImageService
     {
-        public byte[] CreatePreview_100x100(Stream image)
+        public byte[] CreatePreview_100x100(Stream imageStream)
         {
-            using var img = Image.Load(image);
+            using var image = Image.Load(imageStream);
 
             var different = 0;
 
-            var heightMore = img.Height > img.Width;
+            var heightMore = image.Height > image.Width;
             
-            if(img.Height != img.Width) 
-                different = heightMore ? img.Height - img.Width : img.Width - img.Height;
-            
-            img.Mutate(x => 
-                x.Crop(new Rectangle(heightMore ? 0 - different / 2 : 0 , heightMore ? 0 : 0 - different * 2,
-                    heightMore ? img.Width + different : img.Width, heightMore ? img.Height : img.Height + different)).Resize(100, 100));
+            if(image.Height != image.Width) 
+                different = heightMore ? image.Height - image.Width : image.Width - image.Height;
 
-            MemoryStream memoryStream = new MemoryStream();
-            img.SaveAsPng(memoryStream);
+            image.Mutate(x => x
+                .Resize(new ResizeOptions
+                {
+                    Size = new Size(heightMore ? image.Width + different : image.Width, heightMore ? image.Height : image.Height + different),
+                    Mode = ResizeMode.Pad,
+                    
+                }).Resize(100, 100)
+            );
+
+            var memoryStream = new MemoryStream();
+            image.SaveAsPng(memoryStream);
 
             return memoryStream.ToArray();
         }
